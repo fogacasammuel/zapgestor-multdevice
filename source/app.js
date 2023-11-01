@@ -1,22 +1,16 @@
-const express = require("express");
-const venom = require("venom-bot");
-const http = require("http");
-const { Server } = require('socket.io')
-const fs = require("fs");
+import express from "express";
+import venom from "venom-bot";
+import http from "http";
+import { Server } from "socket.io";
+import fs from "fs";
+import { dirname } from "path";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(__dirname + "/../public"));
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
-
-//Responsável por criar a pasta de imagens dentro da plataforma!
-const dirQRCode = "./public/images";
-if (!fs.existsSync(dirQRCode)) {
-    fs.mkdirSync(dirQRCode);
-}
 
 /**
  * CONTROLE DE SESSÕES DO SISTEMA
@@ -80,6 +74,7 @@ const createSession = async (session, multdevide, company) => {
                 source: base64Qr
             });
         },
+        logQR: false,
         statusFind: (statusSession) => {
             io.emit("message", statusSession);
         }
@@ -102,6 +97,11 @@ const createSession = async (session, multdevide, company) => {
             savedSessions[index].ready = true;
             setSessionsFile(savedSessions);
         }
+    });
+
+    const clientLogged = sessions.find(session => session.session == "testando")?.client;
+    clientLogged.onMessage((message) => {
+        console.log(message.from);
     });
 };
 
@@ -167,6 +167,26 @@ app.post("/text", async (req, res) => {
     return res.status(200).json();
 });
 
+app.post("/buttons", async (req, res) => {
+    const body = req.body;
+    const buttons = JSON.parse(body.buttons);
+
+    const client = sessions.find(session => session.session == body.sender)?.client;
+    if (!client) {
+        return res
+            .status(400)
+            .json({ error: 400, message: `The sender: ${body.sender} is not found!` });
+    }
+
+    client.sendButtons(body.number, body.title, buttons, body.content).catch((erro) => {
+        return res
+            .status(500)
+            .json({ error: 500, message: "Error when sending", erro: erro });
+    });
+
+    return res.status(200).json();
+});
+
 //Função responsavel por pegar informaçoes do grupo pesquisado
 async function findGroupByName(client, groupName) {
     const group = await client.getAllChats().then((chats) => {
@@ -180,4 +200,4 @@ async function findGroupByName(client, groupName) {
     return group;
 }
 
-server.listen(3333, () => console.log("Server rodando em :3333"));
+server.listen(3000, () => console.log("Server rodando em :3000"));

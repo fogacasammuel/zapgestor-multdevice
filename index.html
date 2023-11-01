@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZapG | Gafred Business</title>
+
+    <link rel="stylesheet" href="./styles.css">
+</head>
+
+<body>
+    <div class="container py-5">
+        <div class="content_app_box">
+            <div class="box_sidebar">
+
+            </div>
+
+            <div class="box_content">
+                <header class="box_content_header">
+                    <h1><span class="text-primary">ZapG</span> | Gafred Business</h1>
+                </header>
+        
+                <div class="g2r gap mt-2">   
+                    <div class="cards">
+                        <div class="card">
+                            <div class="card_header">
+                                <h2>Todas as sessões</h2>
+                            </div>
+            
+                            <div class="card_body gv gap">
+                                <div class="message" style="color: #999 !important;">☑ Aqui ficaram listadas todas as suas sessões!</div>
+            
+                                <div class="list containerClient g2 gap-05">
+                                    <div class="list_item client" style="display: none;">
+                                        <div class="infors">
+                                            <div class="infors_body">
+                                                <div class="body_data">
+                                                    <a class="title"></a>
+                                                    <p>Status: <b class="log"></b></p>
+                                                </div>
+            
+                                                <div class="body_actions">
+                                                    <button class="btn-sm btn-red">Deletar</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            
+                    <div class="cards">                
+                        <div class="card">
+                            <div class="card_header">
+                                <h2>Nova Sessão</h2>
+                            </div>
+            
+                            <div class="card_body">
+                                <img src="" class="w100 mb-1" id="qrcode" style="display: none;">
+                                
+                                <div class="app_form">
+                                    <div class="label">
+                                        <span class="legend">Nome da sessão</span>
+                                        <input type="text" class="sessionInput" placeholder="Ex.: comercial, financeiro...">
+                                    </div>
+            
+                                    <button class="createSession btn btn-primary w100">Criar Sessão</button>
+
+                                    <div class="tags mt-1">
+                                        <span class="tag">Status: <b></b></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.socket.io/socket.io-3.0.1.min.js"></script>
+    <script>
+        $(function() {
+            const socket = io("http://localhost:3000");
+
+            $(".createSession").click(() => {
+                createSession();
+            });
+
+            function createSession() {
+                const session = document.querySelector(".sessionInput");
+                const image = $("#qrcode");
+
+                socket.emit("create-session", {
+                    session: session.value,
+                    multidevide: false
+                });
+
+                socket.on("qrcode", (data) => {
+                    image.attr("src", data.source).css("display", "flex");
+                });
+            }
+
+            function logoutSession(sender) {
+                socket.emit("logout-session", {
+                    sender: sender
+                });
+            }
+
+            socket.on("initialize", (data) => {
+                $(".containerClient .client").not(":first").remove();
+
+                for (let index = 0; index < data.length; index++) {
+                    let session = data[index];
+
+                    let template = $(".client")
+                        .first()
+                        .clone()
+                        .addClass(`client-${session.session}`)
+                        .show();
+
+                    template.find(".title").html(session.session);
+                    template.find(".logout").addClass(session.session);
+                    $(".containerClient").append(template);
+
+                    let status = !session.ready ? "Conectado!" : "Conectando...";
+                    template.find(".log").html(status);
+                }
+            });
+
+            // socket.on("qrcode", (data) => {
+            //     $(`.client.client-${data.session} .qrcode`).attr("src", data.source);
+            //     $(`.client.client-${data.session} .qrcode`).show();
+            // });
+
+            socket.on("message", (data) => {
+                let status = $(".tag b");
+                status.html(data);
+            });
+        });
+    </script>
+</body>
+
+</html>
